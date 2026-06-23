@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest  # Explicitly install pytest
+          pip install coverage  # Ensure coverage is installed
+          pip install pylint  # Explicitly install pylint if needed
+
+      # Step 3.1: Check installed packages
+      - name: Check installed packages
+        run: |
+          pip show pytest
+          pip show pylint  # Verify pylint is installed
+          pip freeze  # Show all installed packages
+
+      # Step 4: Run tests
+      - name: Run tests
+        run: |
+          pytest tests/ --maxfail=1 --disable-warnings -v
+
+      # Step 5: Lint code
+      - name: Lint code
+        run: |
+          pylint **/*.py || true  # Ignore pylint warnings (not recommended for production)
+
+      # Step 6: Check code coverage
+      - name: Check code coverage
+        run: |
+          coverage run -m pytest
+          coverage report
+
+      # Step 7: Run AI Agent to review PR
+      - name: Run AI Agent to Review PR
+        run: |
+          python .github/workflows/pr_review_agent.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.CIAGENT }}  # GitHub token for API access
